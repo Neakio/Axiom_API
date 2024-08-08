@@ -1,0 +1,93 @@
+.customtable {
+  
+  margin-left: auto;
+  margin-right: auto;
+  display: inline-table;
+}
+
+.customtable th,
+.customtable td {
+  border-bottom: 1px solid #ddd;
+  vertical-align: middle !important;
+}
+
+.customtable tr:hover {
+  background-color: rgba(197, 196, 196, 0.644);
+}
+
+.customtable th {
+  background-color: #049688;
+  color: rgb(255, 255, 255) !important;
+  text-align: center !important;
+  height: 50px;
+  text-shadow: 2px 2px 4px #000000;
+  font-weight: bold;
+  font-size: 1em !important;
+}
+
+.opblock-tag-section.is-open .no-margin,
+.opblock.is-open .no-margin {
+    display: block;
+}
+
+.opblock-tag-section.is-closed .no-margin,
+.opblock.is-closed .no-margin {
+    display: none;
+}
+
+.subsection {
+  margin-left: 20px;
+}
+
+a.h2-link {
+  text-decoration: none; /* Remove underline */
+}
+
+a.h2-link:hover h2 {
+  text-decoration: none; /* Underline on hover if desired */
+}
+
+.opblock-tag-section {
+  border-style: solid;
+  border-color: #ffffff00;
+  border-width: 0px 0px 20px 0px;
+}
+
+.col-hidden {
+  visibility: collapse;
+}
+.col-visible {
+  visibility: visible;
+}
+
+.table-container.custom {
+  position: relative;
+  width: 85%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.toggle-button {
+  background-color: #049688;
+  color: white;
+  text-shadow: 2px 2px 4px #000000;
+  font-weight: bold;
+  font-size: 1em;
+  height: 50px;
+  width: 100px;
+  border: none;
+  cursor: pointer;
+  transform: rotate(90deg);
+  transform-origin: left top;
+  position: absolute;
+  display: inline-block;
+  left: 20px;
+}
+
+
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
