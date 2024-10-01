@@ -9,12 +9,12 @@ formatters:
 handlers:
   uvicorn_log:
     class: logging.FileHandler
-    filename: /var/log/scanner/uvicorn.log
+    filename: /var/log/dnsscan/uvicorn.log
     formatter: default
     level: INFO
   sql_log:
     class: logging.FileHandler
-    filename: /var/log/scanner/database.log
+    filename: /var/log/dnsscan/database.log
     formatter: default
     level: INFO
   console:

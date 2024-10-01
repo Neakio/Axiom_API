@@ -1,5 +1,8 @@
+# ------------------------------ PACKAGES ------------------------------
+# Third-party libraries
 from fastapi import FastAPI
 
+# Local imports
 from documentation.tags import description, tags_metadata
 
 

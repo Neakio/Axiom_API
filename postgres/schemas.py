@@ -1,5 +1,5 @@
 # ------------------------------ PACKAGES ------------------------------
-# General packages
+# Standard imports
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 

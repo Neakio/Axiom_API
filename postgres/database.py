@@ -1,17 +1,16 @@
 # ------------------------------ PACKAGES ------------------------------
-# Independant packages
+# Standard imports
+from dotenv import load_dotenv
+from os import path, getenv
+
+# Third-party libraries
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
-# General packages
-import logging
-from dotenv import load_dotenv
-from os import path, getenv
-
-# Internal packages
+# Local imports
 from functions.utils import create_env, check_env
 from functions.setup_postgresql import setup_db, check_db_status
 

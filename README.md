@@ -67,6 +67,7 @@ This project is a FastAPI application that handles user requests for domain scan
     
     - Create a `.env` file in the project root and add 
       - USER_PASSWORD : the user password for sudo command execution
+      - HOME : the user home path
       - BUCKET_NAME : AWS S3 Bucket name
       - REGION_NAME : AWS Region of your ressources
       - SECRET_NAME : AWS Secret name of the admin token

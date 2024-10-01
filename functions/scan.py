@@ -2,11 +2,13 @@
 # General packages
 import asyncio
 import subprocess
+import pty
 from requests import exceptions, post
 from datetime import datetime
-
+from os import getenv
 # Internal packages
 import functions.utils as utils
+
 
 
 # ------------------------------ PROCESSING ------------------------------
@@ -24,17 +26,13 @@ async def processing(q, domain, output="", uuid="", client_ip=""):
         f"API call received. Start processing for {domain}. The uuid is {uuid} and client_ip is {client_ip}"
     )
     current_datetime = datetime.now().strftime("%Y-%m-%d")
-    file = (
-        f"{current_datetime}_{domain}"
-        if not uuid
-        else f"{current_datetime}_{domain}_{uuid}"
-    )
+    file = f"{current_datetime}_{domain}" if not uuid else f"{current_datetime}_{domain}_{uuid}"
     utils.api_log(f"Output filename: {file}")
 
     code = await scan(input=domain, output=file, profile=(q.value), format=output)
 
     status = "completed" if code == 0 else "error"
-
+    
     if uuid and client_ip:
         await notify(status, file, uuid, client_ip)
     return status
@@ -121,7 +119,7 @@ async def scan(input, output, profile=None, format=""):
     utils.save_to_bucket(output)
 
     length = f"{starttime} - {endtime}"
-    utils.scanner_json(lines_list, tool, length)
+    utils.cert_json(lines_list, tool, length)
     utils.stop_instances()
     subprocess.run(
         [f"rm /var/tmp/scan_input/{input}"],
@@ -130,41 +128,39 @@ async def scan(input, output, profile=None, format=""):
     utils.axiom_log("-----------------------")
     return 0
 
-
 async def notify(status, file, uuid, client_ip):
     try:
         callback_url = f"http://{client_ip}/callback"
-        response = post(
-            callback_url, json={"status": status, "file": file, "uuid": uuid}
-        )
+        response = post(callback_url, json={"status": status, "file": file, "uuid": uuid})
         response.raise_for_status()
     except exceptions.RequestException as e:
         utils.api_log(f"Failed to notify client IP: {client_ip}, error: {e}")
 
-
+        
 async def axiom(module, outype, input, output, profile):
-    command = f"axiom-scan /var/tmp/scan_input/{input} -m {module} {outype} {output}"
+    axiom_path = getenv("AXIOM_PATH")
+    home = getenv("HOME")
+    env = {
+        "TERM": "xterm",
+        "HOME": str(home),
+        "PATH": "/home/ubuntu/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/ubuntu/.local/bin:/home/ubuntu/.axiom/interact"
+    }
+    command = f"{axiom_path}axiom-scan /var/tmp/scan_input/{input} -m {module} {outype} {output}"
     utils.axiom_log(f"Start of {profile} for /var/tmp/scan_input/{input}")
-    utils.axiom_log(f"axiom-scan /var/tmp/scan_input/{input} -m {module} -o {output}")
+    utils.axiom_log(f"{command}")
+    master_fd, slave_fd = pty.openpty()
     process = subprocess.Popen(
-        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        command, shell=True, stdin=slave_fd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, close_fds=True
     )
-    stdout, stderr = await asyncio.get_event_loop().run_in_executor(
-        None, process.communicate
-    )
-    if "exiting" in stdout:
-        utils.axiom_log("Command failed with error")
-        utils.axiom_log(
-            f"End of {profile} using {module}, see error at: /var/log/scanner/axiom.log"
-        )
-        return 1
-    if process.returncode != 0:
+    stdout, stderr = await asyncio.get_event_loop().run_in_executor(None, process.communicate)
+    if process.returncode != 0 or "exiting" in stdout:
         utils.axiom_log("Command failed with error: ")
         utils.axiom_log(stderr)
+        utils.axiom_log("Command output: ")
+        utils.axiom_log(stdout)
         utils.axiom_log(
-            f"End of {profile} using {module}, see error at: /var/log/scanner/axiom.log"
+            f"End of {profile} using {module}, see error at: /var/log/dnsscan/axiom.log"
         )
-        utils.stop_instances()
         return 1
     utils.axiom_log("Command output:")
     utils.axiom_log(stdout)

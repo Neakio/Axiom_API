@@ -1,10 +1,10 @@
 # ------------------------------ PACKAGES ------------------------------
-# General packages
+# Standard imports
 import requests
 
 
 # ------------------------------ MAIN ------------------------------
-response = requests.get("http://checkip.amazonaws.com/")
+response = requests.get("http://checkip.amazonaws.com/", timeout=30)
 public_ip = response.text.strip()
 
 tags_metadata = [

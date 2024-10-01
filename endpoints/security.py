@@ -1,5 +1,13 @@
 # ------------------------------ PACKAGES ------------------------------
-# Independant packages
+# Standard imports
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+from os import getenv
+from pydantic import BaseModel
+from typing import Union
+import re
+
+# Third-party libraries
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from fastapi import HTTPException, Depends, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -9,15 +17,7 @@ from sqlalchemy.orm import Session
 import boto3
 import jwt
 
-# General packages
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
-from os import getenv
-from pydantic import BaseModel
-from typing import Union
-import re
-
-# Internal packages
+# Local imports
 import functions.utils as utils
 from src.app import app
 
@@ -62,7 +62,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     if expires_delta:
         expire = datetime.now() + expires_delta
     else:
-        expire = datetime.now() + timedelta(minutes=15)
+        expire = datetime.now() + timedelta(minutes=3600)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

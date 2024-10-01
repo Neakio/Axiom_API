@@ -1,5 +1,9 @@
 # ------------------------------ PACKAGES ------------------------------
-# Independant packages
+# Standard imports
+import asyncio
+from dotenv import load_dotenv
+
+# Third-party libraries
 from fastapi import (
     Query,
     File,
@@ -10,11 +14,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 
-# General packages
-import asyncio
-from dotenv import load_dotenv
-
-# Internal packages
+# Local imports
 import functions.utils as utils
 import functions.scan as scan
 import endpoints.security as security
@@ -33,13 +33,6 @@ ValidworkflowsEnum = utils.create_enum("ValidworkflowsEnum", workflows)
 router = APIRouter(prefix="/scans", tags=["scans"])
 
 scan_queue = asyncio.Queue()
-
-
-@router.on_event("startup")
-async def startup_event():
-    asyncio.create_task(process_queue())
-    utils.api_log("Scan queue processor started")
-
 
 ################################## [ FUNCTION ] ##################################
 
@@ -84,7 +77,7 @@ async def single_scan(
     )
     filename = f"{domain}.txt"
     with open(
-        f"/var/tmp/scan_input/{filename}", "w"
+        f"/var/tmp/scan_input/{filename}", "w", encoding="utf-8"
     ) as f:  # Save single input as file in input folder
         f.write(f"{domain}\n")
     utils.api_log(f"Temporary file saved as /var/tmp/scan_input/{filename}")
@@ -130,7 +123,6 @@ async def file_scan(
         "uuid": uuid,
         "client_ip": request.client.host,
     }
-    # Append the job to the in-memory queue
     await scan_queue.put(request_data)
     utils.api_log("Job sent to queue")
 

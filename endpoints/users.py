@@ -1,5 +1,8 @@
 # ------------------------------ PACKAGES ------------------------------
-# Independant packages
+# Standard imports
+from dotenv import load_dotenv
+
+# Third-party libraries
 from fastapi import (
     HTTPException,
     Depends,
@@ -7,10 +10,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# General packages
-from dotenv import load_dotenv
-
-# Internal packages
+# Local imports
 import functions.utils as utils
 import endpoints.security as security
 
@@ -22,15 +22,7 @@ from postgres.database import get_db
 
 ################################## [ INIT ] ##################################
 
-load_dotenv()
-
-profiles, formats, workflows = utils.load_json()
-ValidprofilesEnum = utils.create_enum("ValidprofilesEnum", profiles)
-ValidformatsEnum = utils.create_enum("ValidformatsEnum", formats)
-ValidworkflowsEnum = utils.create_enum("ValidworkflowsEnum", workflows)
-
 router = APIRouter(prefix="/users", tags=["users"])
-
 
 ################################### [ API ] ##################################
 # ------------------------------ Users Management ------------------------------

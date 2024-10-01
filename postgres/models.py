@@ -1,5 +1,5 @@
 # ------------------------------ PACKAGES ------------------------------
-# Independant packages
+# Third-party libraries
 from sqlalchemy import Boolean, Column, Integer, String
 
 

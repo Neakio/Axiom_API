@@ -1,5 +1,5 @@
 # ------------------------------ PACKAGES ------------------------------
-# Independant packages
+# Third-party libraries
 from passlib.context import CryptContext
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession

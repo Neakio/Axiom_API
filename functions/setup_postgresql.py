@@ -1,13 +1,13 @@
 # ------------------------------ PACKAGES ------------------------------
-# Independant packages
-from psycopg2 import sql, connect
-
-# General packages
+# Standard imports
 from dotenv import load_dotenv
 import os
 import subprocess
 
-# Internal packages
+# Third-party libraries
+from psycopg2 import sql, connect
+
+# Local imports
 import functions.utils as utils
 
 

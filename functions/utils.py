@@ -1,22 +1,21 @@
 # ------------------------------ PACKAGES ------------------------------
-# Independant packages
-from sqlalchemy.inspection import inspect
-
-# General packages
+# Standard imports
 import asyncio
 import json
-import os
 import subprocess
 from csv import reader
 from datetime import datetime
 from enum import Enum
 from io import StringIO
 from json import loads, dump, load
-from os import path
+from os import path, getenv
 from random import choice
 from re import search, findall
 from secrets import token_hex
 from string import ascii_letters, digits
+
+# Third-party libraries
+from sqlalchemy.inspection import inspect
 
 
 # ------------------------------ .ENV UTILS ------------------------------
@@ -90,11 +89,11 @@ def load_json():
     if not path.exists(file_path):
         # Create the file with default content if it doesn't exist
         default_content = {"profiles": [], "formats": [], "workflows": []}
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             json.dump(default_content, f, indent=4)
     update_cases()
     # Load the JSON data from the file
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         data = load(f)
 
     return data["profiles"], data["formats"], data["workflows"]
@@ -139,10 +138,10 @@ def clean_users_data(users_data):
 
 # ------------------------------ SCAN UTILS ------------------------------
 def save_to_bucket(input):
-    bucket = os.getenv("BUCKET_NAME")
     subprocess.run(
         [f"aws s3 cp /var/tmp/scan_output/{input} s3://{bucket}/scan_output/{input}"],
         shell=True,
+        check=False,
     )
     axiom_log(f"Saving {input} in S3 bucket.")
     return
@@ -150,7 +149,7 @@ def save_to_bucket(input):
 
 def add_https_to_each_line(input):
     axiom_log("Parsing input for web request (https/http)")
-    with open(f"/var/tmp/scan_input/{input}", "r") as file:
+    with open(f"/var/tmp/scan_input/{input}", "r", encoding="utf-8") as file:
         lines = file.readlines()
     modified_lines = []
     for line in lines:
@@ -158,48 +157,53 @@ def add_https_to_each_line(input):
         if not line.startswith("https://"):
             line = "https://" + line
         modified_lines.append(line + "\n")
-    with open(f"/var/tmp/scan_input/{input}", "w") as file:
+    with open(f"/var/tmp/scan_input/{input}", "w", encoding="utf-8") as file:
         file.writelines(modified_lines)
     return
 
 
-def count_lines_in_txt(file_content: str):
-    lines = file_content.splitlines()
+def count_lines_in_txt(file: str):
+    with open(file, 'r', encoding="utf-8"):
+        lines = file.readlines()
     return len(lines)
 
 
-def count_entries_in_json(file_content: str):
-    data = loads(file_content)
+def count_entries_in_json(file: str):
+    with open(file, 'r', encoding="utf-8"):
+        data = loads(file)
     if isinstance(data, list):
         return len(data)
     return 1
 
 
-def count_rows_in_csv(file_content: str) -> int:
-    read = reader(StringIO(file_content))
+def count_rows_in_csv(file: str) -> int:
+    with open(file, 'r', encoding="utf-8"):
+        read = reader(StringIO(file))
     row_count = sum(1 for row in read)
     return row_count
 
 
 # Determine the number of instances based on the line count and config.json
 async def instances_needed(count: int):
-    with open("./data/config.json") as config_file:
+    with open("./data/config.json", encoding="utf-8") as config_file:
         range_config = load(config_file)
     for range_entry in range_config:
         if range_entry["min_lines"] <= count <= range_entry["max_lines"]:
             number = range_entry["instances"]
-    axiom_log(f"Axiom fleet initialized with {number} instance :")
+    axiom_log(f"Axiom fleet initialized with {number} instance (for {count} lines):")
     await start_instances(number)
     return
 
 
 async def start_instances(number: int):
+    axiom_path = getenv("AXIOM_PATH")
     await asyncio.sleep(30)
     result = subprocess.run(
-        [f"axiom-power on 'axiom_node_*' -i {number}"],
+        [f"{axiom_path}axiom-power on 'axiom_node_*' -i {number}"],
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
+        check=False,
     )
     axiom_log(result.stdout)
     if result.stderr:
@@ -207,7 +211,7 @@ async def start_instances(number: int):
 
     await asyncio.sleep(210)
     command = (
-        "axiom-ls --json --skip | "
+        f"{axiom_path}axiom-ls --json --skip | "
         "jq -r '.Reservations[].Instances[] | "
         'select(.Tags[]?.Value | contains("axiom_node")) | '
         ". as $instance | "
@@ -220,17 +224,20 @@ async def start_instances(number: int):
         command,
         shell=True,
         stdout=subprocess.PIPE,
+        check=False,
     )
     axiom_log(result.stdout)
     return result.stdout
 
 
 def stop_instances():
+    axiom_path = getenv("AXIOM_PATH")
     result = subprocess.run(
-        ["axiom-power off 'axiom_node_*'"],
+        [f"{axiom_path}axiom-power off 'axiom_node_*'"],
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
+        check=False,
     )
     axiom_log(result.stdout)
     axiom_log("Axiom fleet stopped")
@@ -238,11 +245,13 @@ def stop_instances():
 
 
 def init_instances():
+    axiom_path = getenv("AXIOM_PATH")
     result = subprocess.run(
-        ["axiom-fleet'axiom_node_' -i 10"],
+        [f"{axiom_path}axiom-fleet 'axiom_node_' -i 10"],
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
+        check=False,
     )
     axiom_log(result.stdout)
     return
@@ -250,7 +259,7 @@ def init_instances():
 
 # ------------------------------ UPDATE UTILS ------------------------------
 def extract_profiles(file_content):
-    match_block_pattern = r"match profile:\n((?:\s+case \"[^\"]+\":(?:\n|.)*?)+)(?=\n\s*match workflow:|\n\s*def)"
+    match_block_pattern = r"match profile:\n((?:\s*case .+?:(?:\n|.)*?)+)(?=\n\s*utils.axiom)"
     match_block = search(match_block_pattern, file_content)
     if match_block:
         block_content = match_block.group(1)
@@ -261,9 +270,7 @@ def extract_profiles(file_content):
 
 
 def extract_formats(file_content):
-    match_block_pattern = (
-        r"match format:\n((?:\s+case .+?(?:\n|.)*?)+)(?=\n\s*def|\n\s*$)"
-    )
+    match_block_pattern = r"match format:\n((?:\s*case .+?:(?:\n|.)*?)+)(?=\n\s*utils.axiom)"
     match_block = search(match_block_pattern, file_content)
     if match_block:
         block_content = match_block.group(1)
@@ -276,7 +283,7 @@ def extract_formats(file_content):
 
 
 def extract_workflows(file_content):
-    match_block_pattern = r"match workflow:\n((?:\s+case \"[^\"]+\":(?:\n|.)*?)+)(?=\n\s*match format:|\n\s*def)"
+    match_block_pattern = r"match workflow:\n((?:\s*case .+?:(?:\n|.)*?)+)(?=\n\s*utils.axiom)"
     match_block = search(match_block_pattern, file_content)
     if match_block:
         block_content = match_block.group(1)
@@ -290,7 +297,7 @@ def update_cases():
     """Read the content of scan.py and extract possible profiles, workflows and formats and save it inside the json"""
     source_file = "./functions/scan.py"
     json_file = "./data/cases.json"
-    with open(source_file, "r") as file:
+    with open(source_file, "r", encoding="utf-8") as file:
         file_content = file.read()
 
     # Extract up to date profiles, formats and workflows
@@ -300,7 +307,7 @@ def update_cases():
 
     data = {"profiles": profiles, "workflows": workflows, "formats": formats}
     # Save to JSON
-    with open(json_file, "w") as file:
+    with open(json_file, "w", encoding="utf-8") as file:
         dump(data, file, indent=4)
     return
 
@@ -321,7 +328,7 @@ def axiom_log(message):
         ):
             formatted_message = f"\033[92m{formatted_message}\033[0m"
 
-    with open("/var/log/scanner/axiom.log", mode="a") as log:
+    with open("/var/log/dnsscan/axiom.log", mode="a", encoding="utf-8") as log:
         log.write(formatted_message + "\n")
     return
 
@@ -345,7 +352,7 @@ def api_log(message: str):
         if "startup" in message.lower():
             formatted_message = f"\n\n{formatted_message}"
 
-    with open("/var/log/scanner/api.log", mode="a") as log:
+    with open("/var/log/dnsscan/api.log", mode="a", encoding="utf-8") as log:
         log.write(formatted_message + "\n")
     return
 
@@ -367,28 +374,31 @@ def db_log(message: str):
         if "setup" in message.lower():
             formatted_message = f"\n\n{formatted_message}"
 
-    with open("/var/log/scanner/database.log", mode="a") as log:
+    with open("/var/log/dnsscan/database.log", mode="a", encoding="utf-8") as log:
         log.write(formatted_message + "\n")
     return
 
 
-def scanner_json(assets, tool, time_range):
+def cert_json(assets, tool, time_range):
+    axiom_path = getenv("AXIOM_PATH")
     date = datetime.now().strftime("%Y-%m-%d")
     command = (
-        "axiom-ls --json --skip | "
+        f"{axiom_path}axiom-ls --json --skip | "
         "jq -r '.Reservations[].Instances[] | "
-        'select(.Tags[]?.Value | contains("axiom_node")) | '
+        "select(.Tags[]?.Value | contains(\"axiom_node\")) | "
         "select(.PublicIpAddress != null) | "
         ".PublicIpAddress'"
     )
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    result = subprocess.run(
+        command, shell=True, capture_output=True, text=True, check=False
+    )
     ip = result.stdout.strip().splitlines()
 
     scan = {"assets": assets, "ip": ip, "command": tool}
-    json_file = "/var/log/scanner/cert.json"
+    json_file = "/var/log/dnsscan/cert.json"
 
     if path.exists(json_file):
-        with open(json_file, "r") as file:
+        with open(json_file, "r", encoding="utf-8") as file:
             existing_data = json.load(file)
     else:
         existing_data = {}
@@ -397,5 +407,5 @@ def scanner_json(assets, tool, time_range):
         existing_data[date] = {}
     existing_data[date][time_range] = scan
 
-    with open(json_file, "w") as file:
+    with open(json_file, "w", encoding="utf-8") as file:
         json.dump(existing_data, file, indent=4)
