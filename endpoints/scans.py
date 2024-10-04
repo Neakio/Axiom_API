@@ -72,6 +72,8 @@ async def single_scan(
     ),
     uuid: str = Query(None, min_length=1, description="Optional to notify end of scan"),
 ):
+    if output is None:
+        output.value="txt"
     utils.api_log(
         f"Single scan requested by {current_user.email} (IP : {request.client.host}). Domain is {domain} and case is {q.value}"
     )
@@ -110,6 +112,8 @@ async def file_scan(
     ),
     uuid: str = Query(None, min_length=1, description="Optional to notify end of scan"),
 ):
+    if output is None:
+        output.value="txt"
     contents = await domain.read()  # Wait & Read uploaded file
     utils.api_log(
         f"File scan requested by {current_user.email} (IP : {request.client.host}). File is here /var/tmp/scan_input/{domain.filename} and case is {q.value}"
