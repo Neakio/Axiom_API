@@ -73,7 +73,9 @@ async def single_scan(
     uuid: str = Query(None, min_length=1, description="Optional to notify end of scan"),
 ):
     if output is None:
-        output.value="txt"
+        output = "txt"
+    else:
+        output = output.value
     utils.api_log(
         f"Single scan requested by {current_user.email} (IP : {request.client.host}). Domain is {domain} and case is {q.value}"
     )
@@ -87,7 +89,7 @@ async def single_scan(
     request_data = {
         "domain": filename,
         "q": q,
-        "output": output.value,
+        "output": output,
         "uuid": uuid,
         "client_ip": request.client.host,
     }
@@ -113,7 +115,9 @@ async def file_scan(
     uuid: str = Query(None, min_length=1, description="Optional to notify end of scan"),
 ):
     if output is None:
-        output.value="txt"
+        output = "txt"
+    else:
+        output = output.value
     contents = await domain.read()  # Wait & Read uploaded file
     utils.api_log(
         f"File scan requested by {current_user.email} (IP : {request.client.host}). File is here /var/tmp/scan_input/{domain.filename} and case is {q.value}"
@@ -123,7 +127,7 @@ async def file_scan(
     request_data = {
         'domain': domain.filename,
         'q': q,
-        'output': output.value,
+        'output': output,
         'uuid': uuid,
         'client_ip': request.client.host
     }
