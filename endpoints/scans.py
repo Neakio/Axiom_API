@@ -85,7 +85,7 @@ async def single_scan(
     request_data = {
         "domain": filename,
         "q": q,
-        "output": output,
+        "output": output.value,
         "uuid": uuid,
         "client_ip": request.client.host,
     }
@@ -112,16 +112,16 @@ async def file_scan(
 ):
     contents = await domain.read()  # Wait & Read uploaded file
     utils.api_log(
-        f"File scan requested by {current_user.email} (IP : {request.client.host}). File is here /var/tmp/scan_input/{domain.filename} and case is {q}"
+        f"File scan requested by {current_user.email} (IP : {request.client.host}). File is here /var/tmp/scan_input/{domain.filename} and case is {q.value}"
     )
     with open(f"/var/tmp/scan_input/{domain.filename}", "wb") as f:
         f.write(contents)
     request_data = {
-        "domain": domain.filename,
-        "q": q,
-        "output": output,
-        "uuid": uuid,
-        "client_ip": request.client.host,
+        'domain': domain.filename,
+        'q': q,
+        'output': output.value,
+        'uuid': uuid,
+        'client_ip': request.client.host
     }
     await scan_queue.put(request_data)
     utils.api_log("Job sent to queue")

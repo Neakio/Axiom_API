@@ -5,7 +5,7 @@ import subprocess
 import pty
 from requests import exceptions, post
 from datetime import datetime
-from os import getenv
+from os import getenv, path
 # Internal packages
 import functions.utils as utils
 
@@ -25,6 +25,7 @@ async def processing(q, domain, output="", uuid="", client_ip=""):
     utils.api_log(
         f"API call received. Start processing for {domain}. The uuid is {uuid} and client_ip is {client_ip}"
     )
+    domain, ext = path.splitext(input)
     current_datetime = datetime.now().strftime("%Y-%m-%d")
     file = f"{current_datetime}_{domain}" if not uuid else f"{current_datetime}_{domain}_{uuid}"
     utils.api_log(f"Output filename: {file}")
@@ -86,7 +87,7 @@ async def scan(input, output, profile=None, format=""):
             return 1
     utils.axiom_log(f"Tool used: {tool}")
     match format:
-        case "" | "txt":
+        case "txt":
             outype = "-o"
         case "json":
             outype = "-oJ"
@@ -116,7 +117,7 @@ async def scan(input, output, profile=None, format=""):
     await axiom(tool, outype, input, f"/var/tmp/scan_output/{output}", profile)
     endtime = datetime.now().strftime("%H:%M:%S")
 
-    utils.save_to_bucket(output)
+    utils.save_to_bucket(f"{output}.{format}")
 
     length = f"{starttime} - {endtime}"
     utils.cert_json(lines_list, tool, length)
@@ -124,6 +125,7 @@ async def scan(input, output, profile=None, format=""):
     subprocess.run(
         [f"rm /var/tmp/scan_input/{input}"],
         shell=True,
+        check=False
     )
     utils.axiom_log("-----------------------")
     return 0
@@ -136,7 +138,7 @@ async def notify(status, file, uuid, client_ip):
     except exceptions.RequestException as e:
         utils.api_log(f"Failed to notify client IP: {client_ip}, error: {e}")
 
-        
+
 async def axiom(module, outype, input, output, profile):
     axiom_path = getenv("AXIOM_PATH")
     home = getenv("HOME")
@@ -165,6 +167,6 @@ async def axiom(module, outype, input, output, profile):
     utils.axiom_log("Command output:")
     utils.axiom_log(stdout)
     utils.axiom_log(
-        f"End of {profile} using {module}, succesfull result: /var/tmp/scan_output/{output}\n"
+        f"End of {profile} using {module}, succesfull result: {output}\n"
     )
     return 0

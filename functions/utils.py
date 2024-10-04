@@ -163,22 +163,22 @@ def add_https_to_each_line(input):
 
 
 def count_lines_in_txt(file: str):
-    with open(file, 'r', encoding="utf-8"):
-        lines = file.readlines()
+    with open(file, 'r', encoding="utf-8") as content:
+        lines = content.readlines()
     return len(lines)
 
 
 def count_entries_in_json(file: str):
-    with open(file, 'r', encoding="utf-8"):
-        data = loads(file)
+    with open(file, 'r', encoding="utf-8") as content:
+        data = loads(content)
     if isinstance(data, list):
         return len(data)
     return 1
 
 
 def count_rows_in_csv(file: str) -> int:
-    with open(file, 'r', encoding="utf-8"):
-        read = reader(StringIO(file))
+    with open(file, 'r', encoding="utf-8") as content:
+        read = reader(StringIO(content))
     row_count = sum(1 for row in read)
     return row_count
 
