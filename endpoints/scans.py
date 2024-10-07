@@ -47,9 +47,7 @@ async def process_queue():
 
 async def handle_scan(job):
     """Process each scan job one at a time."""
-    code = await scan.processing(
-        job["q"], job["domain"], job["output"], job["uuid"], job["client_ip"]
-    )
+    code = await scan.processing(job['q'], job['domain'], job['usecase'], job['output'], job['uuid'], job['client_ip'])
     if code == "completed":
         utils.api_log(f"Scan for {job['domain']} completed successfully.")
     else:
@@ -87,11 +85,12 @@ async def single_scan(
     utils.api_log(f"Temporary file saved as /var/tmp/scan_input/{filename}")
 
     request_data = {
-        "domain": filename,
-        "q": q,
-        "output": output,
-        "uuid": uuid,
-        "client_ip": request.client.host,
+        'domain': filename,
+        'q': q,
+        'usecase': False,
+        'output': output,
+        'uuid': uuid,
+        'client_ip': request.client.host
     }
 
     # Append the job to the in-memory queue
@@ -127,12 +126,42 @@ async def file_scan(
     request_data = {
         'domain': domain.filename,
         'q': q,
-        'output': output,
+        'usecase': False,
         'uuid': uuid,
         'client_ip': request.client.host
     }
     await scan_queue.put(request_data)
     utils.api_log("Job sent to queue")
 
-    # Return immediately to the requester
-    return JSONResponse({"message": "Job sent to queue"})
+    return {"message": "Job sent to queue"}
+
+
+# API endpoint for specific use cases
+@router.post("/workflow")
+async def usecase_scan(
+    request: Request,
+    current_user: models.User = Depends(security.get_current_user),
+    q: ValidworkflowsEnum = Query(..., description="Must be one of the valid values."),
+    domain: UploadFile = File(...),
+    uuid: str = Query(None, min_length=1, description="Optional to notify end of scan"),
+):
+    utils.api_log(
+        f"Usecase scan requested by {current_user.email} (IP : {request.client.host}). File is here /var/tmp/scan_input/{domain.filename} and workflow is {q.value}"
+    )
+    contents = await domain.read()  # Wait & Read uploaded file
+    with open(
+        f"/tmp/scan_input/{domain.filename}", "wb"
+    ) as f:  # Save file in input folder
+        f.write(contents)
+    request_data = {
+        'domain': domain.filename,
+        'q': q,
+        'usecase': True,
+        'output': "",
+        'uuid': uuid,
+        'client_ip': request.client.host
+    }
+    await scan_queue.put(request_data)
+    utils.api_log("Job sent to queue")
+
+    return {"message": "Job sent to queue"}

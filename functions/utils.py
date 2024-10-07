@@ -137,6 +137,12 @@ def clean_users_data(users_data):
 
 
 # ------------------------------ SCAN UTILS ------------------------------
+# TODO
+def save_to_dynamo(input):
+    return
+
+
+# TODO
 def save_to_bucket(input):
     subprocess.run(
         [f"aws s3 cp /var/tmp/scan_output/{input} s3://{bucket}/scan_output/{input}"],
