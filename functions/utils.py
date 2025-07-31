@@ -9,72 +9,8 @@ from enum import Enum
 from io import StringIO
 from json import loads, dump, load
 from os import path, getenv
-from random import choice
 from re import search, findall
-from secrets import token_hex
-from string import ascii_letters, digits
 
-# Third-party libraries
-from sqlalchemy.inspection import inspect
-
-
-# ------------------------------ .ENV UTILS ------------------------------
-def generate_secret_key(length=32):
-    return token_hex(length)
-
-
-def generate_random_string(length=16):
-    letters = ascii_letters + digits
-    return "".join(choice(letters) for i in range(length))
-
-
-def generate_db_cred():
-    db_user = generate_random_string(12)
-    db_password = generate_random_string(16)
-    return (db_user, db_password)
-
-
-def read_env():
-    """Read .env file and return its contents as a dictionary"""
-    env_vars = {}
-    if path.isfile(".env"):
-        with open(".env", "r") as env:
-            for line in env:
-                key, value = line.strip().split("=", 1)
-                env_vars[key] = value
-    return env_vars
-
-
-def check_env():
-    """Check if required environment variables are present"""
-    required_vars = [
-        "SECRET_KEY",
-        "ALGORITHM",
-        "DB_NAME",
-        "DB_USERNAME",
-        "DB_PASSWORD",
-        "DATABASE_URL",
-    ]
-    env_vars = read_env()
-    return all(var in env_vars for var in required_vars)
-
-
-def create_env():
-    """Generate .env file using random credentials"""
-    api_log("Generating environment variables ...")
-    key = generate_secret_key()
-    db_user, db_password = generate_db_cred()
-    with open(".env", "a") as env:
-        env.write("SECRET_KEY=" + key + "\n")
-        env.write("ALGORITHM=HS256\n")
-        env.write("DB_NAME=axiom_api\n")
-        env.write(f"DB_USERNAME={db_user}\n")
-        env.write(f"DB_PASSWORD={db_password}\n")
-        env.write(
-            f"DATABASE_URL=postgresql+asyncpg://{db_user}:{db_password}@localhost/axiom_api\n"
-        )
-    api_log("Environment variables created.")
-    return
 
 
 # ------------------------------ API UTILS ------------------------------
@@ -103,41 +39,9 @@ def load_json():
 def create_enum(name, values):
     return Enum(name, {value: value for value in values})
 
-
-# Convert a SQLAlchemy model instance to a dictionary.
-def to_dict(model_instance):
-    return {
-        c.key: getattr(model_instance, c.key)
-        for c in inspect(model_instance).mapper.column_attrs
-    }
-
-
-# Removes 'hashed_password' and 'id' from a single user dictionary.
-def clean_user_data(user_data):
-    """Remove unecessary data to display
-
-    Args:
-        user_data (dict): Contains every user data
-
-    Returns:
-        dict: Contains only firstname, surname, email, disabled
-    """
-    if not isinstance(user_data, dict):
-        user_data = to_dict(user_data)
-
-    user_data.pop("hashed_password", None)
-    user_data.pop("id", None)
-
-    return user_data
-
-
-# Removes 'hashed_password' and 'id' from a list of user dictionaries.
-def clean_users_data(users_data):
-    return [clean_user_data(user) for user in users_data]
-
-
 # ------------------------------ SCAN UTILS ------------------------------
 def save_to_bucket(input):
+    bucket = getenv("BUCKET_NAME") #BUCKET_NAME env needs to be configured manually
     subprocess.run(
         [f"aws s3 cp /var/tmp/scan_output/{input} s3://{bucket}/scan_output/{input}"],
         shell=True,
@@ -355,29 +259,6 @@ def api_log(message: str):
     with open("/var/log/dnsscan/api.log", mode="a", encoding="utf-8") as log:
         log.write(formatted_message + "\n")
     return
-
-
-def db_log(message: str):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if isinstance(message, bytes):
-        formatted_message = message.decode("utf-8").strip()
-    else:
-        formatted_message = str(message).strip()
-        formatted_message = f"{timestamp} - {message}"
-        if "error" in message.lower():
-            formatted_message = f"\033[91m{formatted_message}\033[0m"
-        elif any(
-            keyword in message.lower()
-            for keyword in ["success", "successful", "successfully"]
-        ):
-            formatted_message = f"\033[92m{formatted_message}\033[0m"
-        if "setup" in message.lower():
-            formatted_message = f"\n\n{formatted_message}"
-
-    with open("/var/log/dnsscan/database.log", mode="a", encoding="utf-8") as log:
-        log.write(formatted_message + "\n")
-    return
-
 
 def cert_json(assets, tool, time_range):
     axiom_path = getenv("AXIOM_PATH")
