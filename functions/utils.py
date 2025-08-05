@@ -40,10 +40,10 @@ def create_enum(name, values):
     return Enum(name, {value: value for value in values})
 
 # ------------------------------ SCAN UTILS ------------------------------
-def save_to_bucket(input):
+def save_to_bucket(input, format):
     bucket = getenv("BUCKET_NAME") #BUCKET_NAME env needs to be configured manually
     subprocess.run(
-        [f"aws s3 cp /var/tmp/scan_output/{input} s3://{bucket}/scan_output/{input}"],
+        [f"aws s3 cp /var/tmp/scan_output/{input} s3://{bucket}/scan_output/{input}.{format}"],
         shell=True,
         check=False,
     )

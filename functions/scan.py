@@ -117,7 +117,7 @@ async def scan(input, output, profile=None, format=""):
     await axiom(tool, outype, input, f"/var/tmp/scan_output/{output}", profile)
     endtime = datetime.now().strftime("%H:%M:%S")
 
-    utils.save_to_bucket(f"{output}.{format}")
+    utils.save_to_bucket(output, format)
 
     length = f"{starttime} - {endtime}"
     utils.cert_json(lines_list, tool, length)
