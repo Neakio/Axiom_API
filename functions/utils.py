@@ -137,13 +137,14 @@ def clean_users_data(users_data):
 
 
 # ------------------------------ SCAN UTILS ------------------------------
-def save_to_bucket(input):
+def save_to_bucket(outfile):
+    bucket = getenv("BUCKET_NAME") #BUCKET_NAME env needs to be configured manually
     subprocess.run(
-        [f"aws s3 cp /var/tmp/scan_output/{input} s3://{bucket}/scan_output/{input}"],
+        [f"aws s3 cp /var/tmp/scan_output/{outfile} s3://{bucket}/scan_output/{outfile}"],
         shell=True,
         check=False,
     )
-    axiom_log(f"Saving {input} in S3 bucket.")
+    axiom_log(f"Saving {outfile} in S3 bucket.")
     return
 
 
