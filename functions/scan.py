@@ -12,35 +12,31 @@ import functions.utils as utils
 
 
 # ------------------------------ PROCESSING ------------------------------
-async def processing(q, file, output="", uuid="", client_ip=""):
+async def processing(q, file, output, client_ip=""):
     """Prepare API request for the scan and call it
 
     Args:
         q (str): Profile/Workflow chosen
         domain (str): Input filename
         output (str, optional): Output type. Default empty.
-        uuid (str, optional): Job UUID, it will be used to send a response and as a str in the filename. Default empty.
         client_ip (str, optional): Requester IP address used to send result. Default empty.
     """
     utils.api_log(
-        f"API call received. Start processing for {file}. The uuid is {uuid} and client_ip is {client_ip}"
+        f"API call received. Start processing for {file}. The client_ip is {client_ip}"
     )
     domain, ext = path.splitext(file)
     current_datetime = datetime.now().strftime("%Y-%m-%d")
-    outfile = f"{current_datetime}_{domain}" if not uuid else f"{current_datetime}_{domain}_{uuid}"
+    outfile = f"{current_datetime}_{q.value}{domain}.{format}"
     utils.api_log(f"Output filename: {outfile}")
 
     code = await scan(input=file, output=outfile, profile=(q.value), format=output)
 
     status = "completed" if code == 0 else "error"
-    
-    if uuid and client_ip:
-        await notify(status, file, uuid, client_ip)
     return status
 
 
 # ------------------------- Main scan function -------------------------
-async def scan(input, output, profile=None, format=""):
+async def scan(input, output, profile=None, format):
     """Run axiom-scan based on arguments provided
 
     Args:
@@ -52,8 +48,6 @@ async def scan(input, output, profile=None, format=""):
     Returns:
         code: return error/success code
     """
-    if format is None:
-        format = ""
     tool = None
     outype = None
     count = 0
@@ -114,10 +108,9 @@ async def scan(input, output, profile=None, format=""):
     await utils.instances_needed(count)  # Start needed instances
 
     starttime = datetime.now().strftime("%H:%M:%S")
-    outfile = f"{output}.{format}"
-    await axiom(tool, outype, input, f"/var/tmp/scan_output/{outfile}", profile)
+    await axiom(tool, outype, input, f"/var/tmp/scan_output/{output}", profile)
     endtime = datetime.now().strftime("%H:%M:%S")
-    utils.save_to_bucket(outfile)
+    utils.save_to_bucket(output)
     length = f"{starttime} - {endtime}"
     utils.cert_json(lines_list, tool, length)
     utils.stop_instances()
@@ -128,15 +121,6 @@ async def scan(input, output, profile=None, format=""):
     )
     utils.axiom_log("-----------------------")
     return 0
-
-async def notify(status, file, uuid, client_ip):
-    try:
-        callback_url = f"http://{client_ip}/callback"
-        response = post(callback_url, json={"status": status, "file": file, "uuid": uuid})
-        response.raise_for_status()
-    except exceptions.RequestException as e:
-        utils.api_log(f"Failed to notify client IP: {client_ip}, error: {e}")
-
 
 async def axiom(module, outype, input, output, profile):
     axiom_path = getenv("AXIOM_PATH")
