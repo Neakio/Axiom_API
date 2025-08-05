@@ -12,7 +12,7 @@ import functions.utils as utils
 
 
 # ------------------------------ PROCESSING ------------------------------
-async def processing(q, domain, output="", uuid="", client_ip=""):
+async def processing(q, file, output="", uuid="", client_ip=""):
     """Prepare API request for the scan and call it
 
     Args:
@@ -23,14 +23,14 @@ async def processing(q, domain, output="", uuid="", client_ip=""):
         client_ip (str, optional): Requester IP address used to send result. Default empty.
     """
     utils.api_log(
-        f"API call received. Start processing for {domain}. The uuid is {uuid} and client_ip is {client_ip}"
+        f"API call received. Start processing for {file}. The uuid is {uuid} and client_ip is {client_ip}"
     )
-    domain, ext = path.splitext(domain)
+    domain, ext = path.splitext(file)
     current_datetime = datetime.now().strftime("%Y-%m-%d")
-    file = f"{current_datetime}_{domain}" if not uuid else f"{current_datetime}_{domain}_{uuid}"
-    utils.api_log(f"Output filename: {file}")
+    outfile = f"{current_datetime}_{domain}" if not uuid else f"{current_datetime}_{domain}_{uuid}"
+    utils.api_log(f"Output filename: {outfile}")
 
-    code = await scan(input=domain, output=file, profile=(q.value), format=output)
+    code = await scan(input=file, output=outfile, profile=(q.value), format=output)
 
     status = "completed" if code == 0 else "error"
     
