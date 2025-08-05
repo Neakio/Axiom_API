@@ -45,6 +45,7 @@ async def process_queue():
 
 async def handle_scan(job):
     """Process each scan job one at a time."""
+    utils.api_log(f"Scan for {job['domain']} launched.")
     code = await scan.processing(
         job["q"], job["domain"], job["output"], job["uuid"], job["client_ip"]
     )

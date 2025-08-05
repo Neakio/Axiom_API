@@ -25,7 +25,7 @@ async def processing(q, domain, output="", uuid="", client_ip=""):
     utils.api_log(
         f"API call received. Start processing for {domain}. The uuid is {uuid} and client_ip is {client_ip}"
     )
-    domain, ext = path.splitext(input)
+    domain, ext = path.splitext(domain)
     current_datetime = datetime.now().strftime("%Y-%m-%d")
     file = f"{current_datetime}_{domain}" if not uuid else f"{current_datetime}_{domain}_{uuid}"
     utils.api_log(f"Output filename: {file}")
