@@ -114,11 +114,10 @@ async def scan(input, output, profile=None, format=""):
     await utils.instances_needed(count)  # Start needed instances
 
     starttime = datetime.now().strftime("%H:%M:%S")
-    await axiom(tool, outype, input, f"/var/tmp/scan_output/{output}", profile)
+    outfile = f"{output}.{format}"
+    await axiom(tool, outype, input, f"/var/tmp/scan_output/{outfile}", profile)
     endtime = datetime.now().strftime("%H:%M:%S")
-
-    utils.save_to_bucket(output, format)
-
+    utils.save_to_bucket(outfile)
     length = f"{starttime} - {endtime}"
     utils.cert_json(lines_list, tool, length)
     utils.stop_instances()
