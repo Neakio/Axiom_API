@@ -9,7 +9,6 @@ from fastapi import (
     Query,
     File,
     UploadFile,
-    Depends,
     Request,
     APIRouter,
 )
@@ -18,7 +17,6 @@ from fastapi.responses import JSONResponse
 # Local imports
 import functions.utils as utils
 import functions.scan as scan
-import endpoints.security as security
 
 
 ################################## [ INIT ] ##################################
@@ -63,20 +61,18 @@ async def handle_scan(job):
 @router.get("/")
 async def single_scan(
     request: Request,
-    _: None = Depends(security.check_token),
     q: ValidprofilesEnum = Query(..., description="Must be one of the valid values."),
     domain: str = Query(..., min_length=1, description="Cannot be empty"),
     output: ValidformatsEnum = Query(
         None, description="Optional format. Must be one of the valid values."
     ),
-     user: str = Query(..., min_length=1),
 ):
     if output is None:
         output = "txt"
     else:
         output = output.value
     utils.api_log(
-        f"Single scan requested by {user.email} (IP : {request.client.host}). Domain is {domain} and case is {q.value}"
+        f"Single scan requested by (IP : {request.client.host}). Domain is {domain} and case is {q.value}"
     )
     filename = f"{domain}.txt"
     with open(
@@ -104,13 +100,11 @@ async def single_scan(
 @router.post("/")
 async def file_scan(
     request: Request,
-    _: None = Depends(security.check_token),
     q: ValidprofilesEnum = Query(..., description="Must be one of the valid values."),
     domain: UploadFile = File(...),
     output: ValidformatsEnum = Query(
         None, description="Optional format. Must be one of the valid values."
     ),
-    user: str = Query(..., min_length=1),
 ):
     if output is None:
         output = "txt"
@@ -118,22 +112,21 @@ async def file_scan(
         output = output.value
     contents = await domain.read()  # Wait & Read uploaded file
     utils.api_log(
-        f"File scan requested by {user.email} (IP : {request.client.host}). File is here /var/tmp/scan_input/{domain.filename} and case is {q.value}"
+        f"File scan requested by (IP : {request.client.host}). File is here /var/tmp/scan_input/{domain.filename} and case is {q.value}"
     )
     with open(f"/var/tmp/scan_input/{domain.filename}", "wb") as f:
         f.write(contents)
     request_data = {
-        'domain': domain.filename,
-        'q': q,
-        'output': output,
-        'client_ip': request.client.host
+        "domain": domain.filename,
+        "q": q,
+        "output": output,
+        "client_ip": request.client.host,
     }
     await scan_queue.put(request_data)
     utils.api_log("Job sent to queue")
 
     # Return immediately to the requester
     return JSONResponse({"message": "Job sent to queue"})
-
 
 
 # Test endpoint
@@ -152,7 +145,7 @@ async def test_endpoint(request: Request):
         "headers": headers,
         "query_params": query_params,
         "body": body,
-        "client_host": request.client.host if request.client else "unknown"
+        "client_host": request.client.host if request.client else "unknown",
     }
 
     with open("request_dump.json", "a", encoding="utf-8") as f:

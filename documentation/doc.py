@@ -44,12 +44,3 @@ async def scan_documentation():
             return HTMLResponse(content=file.read(), status_code=200)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="HTML page not found")
-
-
-@router.get("/users", response_class=HTMLResponse)
-async def user_documentation():
-    try:
-        with open("documentation/static/user.html", encoding="utf-8") as file:
-            return HTMLResponse(content=file.read(), status_code=200)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="HTML page not found")
