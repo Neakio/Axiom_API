@@ -6,9 +6,9 @@ import pty
 from requests import exceptions, post
 from datetime import datetime
 from os import getenv, path
+
 # Internal packages
 import functions.utils as utils
-
 
 
 # ------------------------------ PROCESSING ------------------------------
@@ -36,7 +36,7 @@ async def processing(q, file, output, client_ip=""):
 
 
 # ------------------------- Main scan function -------------------------
-async def scan(input, output, profile=None, format):
+async def scan(input, output, profile=None, format="txt"):
     """Run axiom-scan based on arguments provided
 
     Args:
@@ -114,13 +114,10 @@ async def scan(input, output, profile=None, format):
     length = f"{starttime} - {endtime}"
     utils.cert_json(lines_list, tool, length)
     utils.stop_instances()
-    subprocess.run(
-        [f"rm /var/tmp/scan_input/{input}"],
-        shell=True,
-        check=False
-    )
+    subprocess.run([f"rm /var/tmp/scan_input/{input}"], shell=True, check=False)
     utils.axiom_log("-----------------------")
     return 0
+
 
 async def axiom(module, outype, input, output, profile):
     axiom_path = getenv("AXIOM_PATH")
@@ -128,16 +125,25 @@ async def axiom(module, outype, input, output, profile):
     env = {
         "TERM": "xterm",
         "HOME": str(home),
-        "PATH": "/home/ubuntu/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/ubuntu/.local/bin:/home/ubuntu/.axiom/interact"
+        "PATH": "/home/ubuntu/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/ubuntu/.local/bin:/home/ubuntu/.axiom/interact",
     }
     command = f"{axiom_path}axiom-scan /var/tmp/scan_input/{input} -m {module} {outype} {output}"
     utils.axiom_log(f"Start of {profile} for /var/tmp/scan_input/{input}")
     utils.axiom_log(f"{command}")
     master_fd, slave_fd = pty.openpty()
     process = subprocess.Popen(
-        command, shell=True, stdin=slave_fd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, close_fds=True
+        command,
+        shell=True,
+        stdin=slave_fd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+        close_fds=True,
     )
-    stdout, stderr = await asyncio.get_event_loop().run_in_executor(None, process.communicate)
+    stdout, stderr = await asyncio.get_event_loop().run_in_executor(
+        None, process.communicate
+    )
     if process.returncode != 0 or "exiting" in stdout:
         utils.axiom_log("Command failed with error: ")
         utils.axiom_log(stderr)
@@ -149,7 +155,5 @@ async def axiom(module, outype, input, output, profile):
         return 1
     utils.axiom_log("Command output:")
     utils.axiom_log(stdout)
-    utils.axiom_log(
-        f"End of {profile} using {module}, succesfull result: {output}\n"
-    )
+    utils.axiom_log(f"End of {profile} using {module}, succesfull result: {output}\n")
     return 0
