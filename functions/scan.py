@@ -3,7 +3,6 @@
 import asyncio
 import subprocess
 import pty
-from requests import exceptions, post
 from datetime import datetime
 from os import getenv, path
 
